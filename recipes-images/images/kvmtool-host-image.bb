@@ -1,4 +1,4 @@
-SUMMARY = "KVMTOOL minimal image"
+SUMMARY = "Hypervisor Host Image"
 
 IMAGE_INSTALL = "packagegroup-core-boot kvmtool"
 
