@@ -1,6 +1,6 @@
 SUMMARY = "Hypervisor Host Image"
 
-IMAGE_INSTALL = "packagegroup-core-boot kvmtool"
+IMAGE_INSTALL = "packagegroup-core-boot kvmtool kernel-image"
 
 IMAGE_LINGUAS = "en-us"
 

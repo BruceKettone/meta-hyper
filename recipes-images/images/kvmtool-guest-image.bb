@@ -1,6 +1,6 @@
 SUMMARY = "Nested Guest Image"
 
-IMAGE_INSTALL = "kernel-image"
+IMAGE_INSTALL = "packagegroup-core-boot"
 
 IMAGE_LINGUAS = "en-us"
 
