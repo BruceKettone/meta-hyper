@@ -13,8 +13,8 @@ require recipes-kernel/linux/linux-yocto.inc
 LINUX_VERSION ?= "6.18.19"
 LINUX_VERSION_EXTENSION:append = "-tiny-host"
 
-# Enable built-in Yocto fragments for VirtIO, EXT4, and Devtmpfs
-KERNEL_FEATURES = "cfg/virtio.scc cfg/fs/ext4.scc cfg/fs/devtmpfs.scc"
+# Enable built-in Yocto fragments for EXT4 and Devtmpfs
+KERNEL_FEATURES = "cfg/fs/ext4.scc cfg/fs/devtmpfs.scc"
 
 KMETA = "kernel-meta"
 KCONF_BSP_AUDIT_LEVEL = "2"
@@ -28,7 +28,8 @@ SRC_URI = "git://git.yoctoproject.org/linux-yocto.git;branch=${KBRANCH};name=mac
            git://git.yoctoproject.org/yocto-kernel-cache;type=kmeta;name=meta;branch=yocto-6.18;destsuffix=${KMETA};protocol=https \
            file://defconfig \
            file://minimal-boot.cfg \
-           file://shell-enablement.cfg"
+           file://shell-enablement.cfg \
+           file://debug.cfg"
 
 PROVIDES += "virtual/kernel linux-host-tiny"
 COMPATIBLE_MACHINE = ".*"
