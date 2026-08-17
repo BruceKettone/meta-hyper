@@ -29,7 +29,8 @@ SRC_URI = "git://git.yoctoproject.org/linux-yocto.git;branch=${KBRANCH};name=mac
            file://defconfig \
            file://minimal-boot.cfg \
            file://shell-enablement.cfg \
-           file://debug.cfg"
+           file://debug.cfg \
+           file://lkvm-enablement.cfg"
 
 PROVIDES += "virtual/kernel linux-host-tiny"
 COMPATIBLE_MACHINE = ".*"
