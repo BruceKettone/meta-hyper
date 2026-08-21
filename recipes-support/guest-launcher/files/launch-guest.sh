@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "=== Preparing VFIO Passthrough ==="
-for dev in "0000:00:01.0" "0000:00:03.0" "0000:00:04.0" "0000:00:05.0" "0000:00:06.0"; do
+for dev in "0000:01:00.0" "0000:00:03.0" "0000:02:00.0" "0000:00:05.0" "0000:00:06.0"; do
     if [ -e "/sys/bus/pci/devices/$dev" ]; then
         echo "Binding $dev to vfio-pci..."
         echo "$dev" > /sys/bus/pci/devices/$dev/driver/unbind 2>/dev/null || true
@@ -22,11 +22,11 @@ exec lkvm run --debug \
     -m 210 \
     -c 1 \
     --name yocto_gui_guest \
-    --vfio-pci 0000:00:01.0 \
+    --vfio-pci 0000:01:00.0 \
     --vfio-pci 0000:00:03.0 \
-    --vfio-pci 0000:00:04.0 \
+    --vfio-pci 0000:02:00.0 \
     --vfio-pci 0000:00:05.0 \
     --vfio-pci 0000:00:06.0 \
     --irqchip gicv3-its \
     --console virtio \
-    -p "root=/dev/vda rw console=tty0 console=hvc0"
+    -p "root=/dev/sda rw console=tty0 console=hvc0"

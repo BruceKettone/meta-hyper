@@ -48,17 +48,19 @@ qemu-system-aarch64 \
   -m 1024M \
   -snapshot \
   -kernel "${KERNEL_IMG}" \
+  -device pcie-root-port,id=pcie.1,chassis=1,slot=1 \
   -drive if=none,file="${GUEST_FS_IMG}",format=raw,id=hd1 \
-  -device virtio-blk-pci,drive=hd1,disable-legacy=on \
+  -device ahci,id=ahci0,bus=pcie.1 -device ide-hd,bus=ahci0.0,drive=hd1 \
   -drive if=none,file="${ROOTFS_IMG}",format=raw,id=hd0 \
   -device virtio-blk-pci,drive=hd0,disable-legacy=on \
   -netdev user,id=net0 \
-  -audiodev none,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 \
-  -device virtio-net-pci,netdev=net0,disable-legacy=on \
+  -audiodev spice,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 \
+  -device pcie-root-port,id=pcie.2,chassis=2,slot=2 \
+  -device e1000e,netdev=net0,bus=pcie.2 \
   -device bochs-display,id=gpu0,romfile="" \
-  -device qemu-xhci,id=usbbus \
+  -device usb-ehci,id=usbbus \
   -device usb-kbd,bus=usbbus.0 \
   -device usb-tablet,bus=usbbus.0 \
-  -display vnc=0.0.0.0:0 \
+  -spice port=5900,disable-ticketing=on \
   -serial stdio \
-  -append "root=/dev/vdb rw console=ttyAMA0 iommu.passthrough=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1"
+  -append "root=/dev/vda rw console=ttyAMA0 iommu.passthrough=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1"
