@@ -16,17 +16,21 @@ echo "=== Preparing Guest Kernel (FD Trick) ==="
 exec 3< /guest-Image
 rm -f /guest-Image
 
-echo "=== Launching Nested Guest (lkvm) ==="
-exec lkvm run --debug \
-    -k /proc/self/fd/3 \
+echo "=== Launching Nested Guest (QEMU) ==="
+exec qemu-system-aarch64 \
+    -machine virt,gic-version=3 \
+    -cpu host \
+    -enable-kvm \
     -m 210 \
-    -c 1 \
-    --name yocto_gui_guest \
-    --vfio-pci 0000:01:00.0 \
-    --vfio-pci 0000:00:03.0 \
-    --vfio-pci 0000:02:00.0 \
-    --vfio-pci 0000:00:05.0 \
-    --vfio-pci 0000:00:06.0 \
-    --irqchip gicv3-its \
-    --console virtio \
-    -p "root=/dev/sda rw console=tty0 console=hvc0"
+    -smp 1 \
+    -name yocto_gui_guest \
+    -nographic \
+    -kernel /proc/self/fd/3 \
+    -device virtio-iommu-pci,boot-bypass=off \
+    -device virtio-balloon-pci \
+    -device vfio-pci,host=0000:01:00.0 \
+    -device vfio-pci,host=0000:00:03.0 \
+    -device vfio-pci,host=0000:02:00.0 \
+    -device vfio-pci,host=0000:00:05.0 \
+    -device vfio-pci,host=0000:00:06.0 \
+    -append "root=/dev/sda rw console=tty0 console=hvc0 iommu.strict=1 iommu.passthrough=0"

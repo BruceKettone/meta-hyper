@@ -1,5 +1,5 @@
 SUMMARY = "Hypervisor Host Image (Base)"
-IMAGE_INSTALL = "packagegroup-core-boot kvmtool kernel-image guest-launcher"
+IMAGE_INSTALL = "packagegroup-core-boot qemu kernel-image guest-launcher"
 IMAGE_LINGUAS = "en-us"
 LICENSE = "MIT"
 inherit core-image

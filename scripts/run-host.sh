@@ -64,4 +64,4 @@ qemu-system-aarch64 \
   -device usb-tablet,bus=usbbus.0 \
   -spice port=5900,disable-ticketing=on \
   -serial stdio \
-  -append "root=/dev/vda rw console=ttyAMA0 iommu.passthrough=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1"
+  -append "root=/dev/vda rw console=ttyAMA0 iommu.passthrough=0 iommu.strict=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1"
