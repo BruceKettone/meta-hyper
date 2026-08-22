@@ -10,6 +10,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 MC_VARIANT="$1"
+HOST_RAM="${2:-1024}"
 
 # --- Dynamic Path Resolution ---
 if [ -n "$BUILDDIR" ]; then
@@ -45,7 +46,7 @@ echo "Booting the QEMU Host..."
 qemu-system-aarch64 \
   -machine virt,virtualization=on,iommu=smmuv3,gic-version=3 \
   -cpu cortex-a57 \
-  -m 1024M \
+  -m "${HOST_RAM}M" \
   -snapshot \
   -kernel "${KERNEL_IMG}" \
   -device pcie-root-port,id=pcie.1,chassis=1,slot=1 \
