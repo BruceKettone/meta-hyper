@@ -21,13 +21,13 @@ exec qemu-system-aarch64 \
     -machine virt,gic-version=3 \
     -cpu host \
     -enable-kvm \
-    -m 210 \
+    -m 300 \
     -smp 1 \
     -name yocto_gui_guest \
     -nographic \
     -kernel /proc/self/fd/3 \
     -device virtio-iommu-pci,boot-bypass=off \
-    -device virtio-balloon-pci \
+    -device virtio-balloon-pci,free-page-reporting=on,deflate-on-oom=on \
     -device vfio-pci,host=0000:01:00.0 \
     -device vfio-pci,host=0000:00:03.0 \
     -device vfio-pci,host=0000:02:00.0 \

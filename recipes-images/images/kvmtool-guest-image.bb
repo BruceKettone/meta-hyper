@@ -21,7 +21,8 @@ IMAGE_INSTALL = "packagegroup-core-boot \
                  xauth \
                  mpv \
                  alsa-utils \
-                 ca-certificates"
+                 ca-certificates \
+                 surf"
 
 IMAGE_LINGUAS = ""
 LICENSE = "MIT"
@@ -38,4 +39,11 @@ remove_crashing_libinput() {
     rm -f ${IMAGE_ROOTFS}/etc/X11/xorg.conf.d/40-libinput.conf
 }
 
-ROOTFS_POSTPROCESS_COMMAND += "remove_crashing_libinput; "
+# Auto-configure DHCP on eth0
+auto_configure_network() {
+    mkdir -p "${IMAGE_ROOTFS}/etc/network"
+    echo "auto eth0" > "${IMAGE_ROOTFS}/etc/network/interfaces"
+    echo "iface eth0 inet dhcp" >> "${IMAGE_ROOTFS}/etc/network/interfaces"
+}
+
+ROOTFS_POSTPROCESS_COMMAND += "remove_crashing_libinput; auto_configure_network; "
