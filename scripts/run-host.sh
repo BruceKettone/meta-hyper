@@ -46,22 +46,24 @@ echo "Booting the QEMU Host..."
 qemu-system-aarch64 \
   -machine virt,virtualization=on,iommu=smmuv3,gic-version=3 \
   -cpu cortex-a57 \
+  -monitor tcp:0.0.0.0:4444,server,nowait \
   -m "${HOST_RAM}M" \
   -snapshot \
   -kernel "${KERNEL_IMG}" \
-  -device pcie-root-port,id=pcie.1,chassis=1,slot=1 \
+  -device virtio-balloon-pci,id=balloon0,addr=0x02 \
+  -device pcie-root-port,id=pcie.1,chassis=1,slot=1,addr=0x03 \
   -drive if=none,file="${GUEST_FS_IMG}",format=raw,id=hd1 \
   -device ahci,id=ahci0,bus=pcie.1 -device ide-hd,bus=ahci0.0,drive=hd1 \
   -drive if=none,file="${ROOTFS_IMG}",format=raw,id=hd0 \
-  -device virtio-blk-pci,drive=hd0,disable-legacy=on \
+  -device virtio-blk-pci,drive=hd0,disable-legacy=on,addr=0x04 \
   -netdev user,id=net0 \
-  -audiodev spice,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 \
-  -device pcie-root-port,id=pcie.2,chassis=2,slot=2 \
+  -audiodev spice,id=snd0 -device intel-hda,addr=0x05 -device hda-output,audiodev=snd0 \
+  -device pcie-root-port,id=pcie.2,chassis=2,slot=2,addr=0x06 \
   -device e1000e,netdev=net0,bus=pcie.2 \
-  -device bochs-display,id=gpu0,romfile="" \
-  -device usb-ehci,id=usbbus \
+  -device bochs-display,id=gpu0,romfile="",addr=0x07 \
+  -device usb-ehci,id=usbbus,addr=0x08 \
   -device usb-kbd,bus=usbbus.0 \
   -device usb-tablet,bus=usbbus.0 \
   -spice port=5900,disable-ticketing=on \
   -serial stdio \
-  -append "root=/dev/vda rw console=ttyAMA0 iommu.passthrough=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1"
+  -append "root=/dev/vda rw console=ttyAMA0 iommu.passthrough=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1 sysctl.vm.min_free_kbytes=16384 memmap=32M\$0x50000000"

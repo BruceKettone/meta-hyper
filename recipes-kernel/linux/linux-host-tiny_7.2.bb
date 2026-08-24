@@ -26,7 +26,8 @@ SRC_URI = "git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git;branch
            file://shell-enablement.cfg \
            file://debug.cfg \
            file://lkvm-enablement.cfg \
-           file://vfio-enablement.cfg"
+           file://vfio-enablement.cfg \
+           file://shrink-smmuv3-queues-7.2.patch"
 
 # Dynamically pull in the swap feature defined by the multiconfig
 SRC_URI += "${@ 'file://' + d.getVar('HOST_SWAP_FEATURE') if d.getVar('HOST_SWAP_FEATURE') else '' }"
