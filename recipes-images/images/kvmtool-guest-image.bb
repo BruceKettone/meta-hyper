@@ -25,7 +25,8 @@ IMAGE_INSTALL = "packagegroup-core-boot \
                  time-sync \
                  surf \
                  web-search \
-                 play-video "
+                 play-video \
+                 guest-logger "
 
 IMAGE_LINGUAS = ""
 LICENSE = "MIT"
