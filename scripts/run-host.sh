@@ -50,10 +50,10 @@ qemu-system-aarch64 \
   -snapshot \
   -kernel "${KERNEL_IMG}" \
   -device pcie-root-port,id=pcie.1,chassis=1,slot=1 \
-  -drive if=none,file="${GUEST_FS_IMG}",format=raw,id=hd1 \
-  -device ahci,id=ahci0,bus=pcie.1 -device ide-hd,bus=ahci0.0,drive=hd1 \
   -drive if=none,file="${ROOTFS_IMG}",format=raw,id=hd0 \
   -device virtio-blk-pci,drive=hd0,disable-legacy=on \
+  -drive if=none,file="${GUEST_FS_IMG}",format=raw,id=hd1 \
+  -device virtio-blk-pci,drive=hd1,disable-legacy=on \
   -netdev user,id=net0 \
   -audiodev spice,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 \
   -device pcie-root-port,id=pcie.2,chassis=2,slot=2 \

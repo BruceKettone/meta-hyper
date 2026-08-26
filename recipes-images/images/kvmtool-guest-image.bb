@@ -22,7 +22,10 @@ IMAGE_INSTALL = "packagegroup-core-boot \
                  mpv \
                  alsa-utils \
                  ca-certificates \
-                 surf"
+                 time-sync \
+                 surf \
+                 web-search \
+                 play-video "
 
 IMAGE_LINGUAS = ""
 LICENSE = "MIT"
@@ -39,11 +42,20 @@ remove_crashing_libinput() {
     rm -f ${IMAGE_ROOTFS}/etc/X11/xorg.conf.d/40-libinput.conf
 }
 
-# Auto-configure DHCP on eth0
 auto_configure_network() {
-    mkdir -p "${IMAGE_ROOTFS}/etc/network"
-    echo "auto eth0" > "${IMAGE_ROOTFS}/etc/network/interfaces"
-    echo "iface eth0 inet dhcp" >> "${IMAGE_ROOTFS}/etc/network/interfaces"
+    mkdir -p "${IMAGE_ROOTFS}/etc/init.d"
+    mkdir -p "${IMAGE_ROOTFS}/etc/rc5.d"
+
+    cat << 'EOF' > "${IMAGE_ROOTFS}/etc/init.d/force-dhcp"
+#!/bin/sh
+echo "Automating network bring-up..."
+
+ip link set eth0 up
+udhcpc -i eth0 -b
+EOF
+
+    chmod +x "${IMAGE_ROOTFS}/etc/init.d/force-dhcp"
+    ln -sf ../init.d/force-dhcp "${IMAGE_ROOTFS}/etc/rc5.d/S99force-dhcp"
 }
 
 ROOTFS_POSTPROCESS_COMMAND += "remove_crashing_libinput; auto_configure_network; "
