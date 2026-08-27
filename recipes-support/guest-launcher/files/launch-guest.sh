@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "=== Preparing VFIO Passthrough ==="
-for dev in "0000:01:00.0" "0000:02:00.0" "0000:00:05.0" "0000:00:07.0" "0000:00:08.0"; do
+for dev in "0000:01:00.0" "0000:00:05.0" "0000:00:07.0" "0000:00:08.0"; do
     if [ -e "/sys/bus/pci/devices/$dev" ]; then
         echo "Binding $dev to vfio-pci..."
         echo "$dev" > /sys/bus/pci/devices/$dev/driver/unbind 2>/dev/null || true
@@ -19,15 +19,17 @@ rm -f /guest-Image
 echo "=== Launching Nested Guest (lkvm) ==="
 exec lkvm run --debug \
     -k /proc/self/fd/3 \
-    -m 210 \
+    -d /dev/vdb \
+    -n mode=none \
+    -m 300 \
     -c 1 \
     --name yocto_gui_guest \
     --vfio-pci 0000:01:00.0 \
-    --vfio-pci 0000:02:00.0 \
     --vfio-pci 0000:00:05.0 \
     --vfio-pci 0000:00:07.0 \
     --vfio-pci 0000:00:08.0 \
-    --vfio-bounce-buffer 32 \
+    --vfio-bounce-buffer 16 \
     --irqchip gicv3-its \
     --console virtio \
-    -p "root=/dev/sda rw console=tty0 console=hvc0"
+    -p "root=/dev/vda rw console=tty0 console=hvc0 swiotlb=force"
+
