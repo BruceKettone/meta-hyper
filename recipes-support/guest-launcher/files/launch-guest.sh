@@ -27,6 +27,7 @@ exec lkvm run --debug \
     --vfio-pci 0000:00:05.0 \
     --vfio-pci 0000:00:07.0 \
     --vfio-pci 0000:00:08.0 \
+    --vfio-bounce-buffer 32 \
     --irqchip gicv3-its \
     --console virtio \
     -p "root=/dev/sda rw console=tty0 console=hvc0"
