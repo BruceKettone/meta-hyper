@@ -2,7 +2,7 @@
 
 STREAM=0
 DEFAULT_URL="https://filesamples.com/samples/video/mp4/sample_640x360.mp4"
-TEMP_FILE="/tmp/downloaded_vid.webm"
+TEMP_FILE="/home/root/downloaded_vid.webm"
 
 # Parse arguments loop
 while [ "$#" -gt 0 ]; do
@@ -37,7 +37,7 @@ case "$TARGET" in
             echo "Streaming video directly..."
             exec mpv --vo=x11 --cache=no --no-audio "$TARGET"
         else
-            echo "Downloading video to RAM/disk first..."
+            echo "Downloading video to disk first..."
             rm -f "$TEMP_FILE"
 
             wget -O "$TEMP_FILE" "$TARGET"
