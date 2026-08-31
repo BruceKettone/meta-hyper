@@ -4,13 +4,14 @@
 set -e
 
 # --- Command Line Arguments ---
-if [ -z "$1" ]; then
-    echo "Usage: $0 [reference|zram|zswap]"
-    echo "Example: $0 zswap"
+if [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Usage: $0 [kvmtool|qemu] [reference|zram|zswap] [HOST_RAM_MB]"
+    echo "Example: $0 qemu zswap"
     exit 1
 fi
-MC_VARIANT="$1"
-HOST_RAM="${2:-1024}"
+HYPERVISOR="$1"
+MC_VARIANT="$2"
+HOST_RAM="${3:-1024}"
 
 # --- Dynamic Path Resolution ---
 if [ -n "$BUILDDIR" ]; then
@@ -26,21 +27,21 @@ BUILD_DIR_HOST="${BUILD_ROOT}/tmp-host-${MC_VARIANT}/deploy/images/hyper-host-ar
 
 # --- Target Files ---
 KERNEL_IMG="${BUILD_DIR_HOST}/Image"
-ROOTFS_IMG="${BUILD_DIR_HOST}/kvmtool-host-image-${MC_VARIANT}-hyper-host-arm64.rootfs.erofs"
+ROOTFS_IMG="${BUILD_DIR_HOST}/${HYPERVISOR}-host-image-${MC_VARIANT}-hyper-host-arm64.rootfs.erofs"
 BUILD_DIR_GUEST="${BUILD_ROOT}/tmp-guest/deploy/images/lkvm-arm64"
 GUEST_FS_IMG="${BUILD_DIR_GUEST}/kvmtool-guest-image-lkvm-arm64.rootfs.ext4"
 
 # --- Pre-Flight Checks ---
-echo "Verifying boot files..."
+echo "Verifying boot files for ${HYPERVISOR} hypervisor host..."
 for FILE in "$KERNEL_IMG" "$ROOTFS_IMG" "$GUEST_FS_IMG"; do
     if [ ! -f "$FILE" ]; then
         echo "Error: Missing required file: $FILE"
-        echo "Make sure you have run the Yocto build and the build-guest.sh script."
+        echo "Make sure you have run the Yocto build for ${HYPERVISOR}-host-image-${MC_VARIANT}."
         exit 1
     fi
 done
 
-echo "Booting the QEMU Host..."
+echo "Booting the QEMU Host (${HYPERVISOR} target)..."
 
 CMDLINE="root=/dev/vda ro rootfstype=erofs console=ttyAMA0 iommu.passthrough=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1 sysctl.vm.min_free_kbytes=2048 sysctl.vm.watermark_boost_factor=0 sysctl.vm.watermark_scale_factor=100 sysctl.vm.extfrag_threshold=1000 sysctl.vm.swappiness=150 sysctl.vm.vfs_cache_pressure=150"
 
