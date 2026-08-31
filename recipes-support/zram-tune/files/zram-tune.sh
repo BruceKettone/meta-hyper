@@ -16,21 +16,27 @@ echo 500 > /proc/sys/vm/vfs_cache_pressure
 
 # Extreme Low-Memory Watermarks
 echo 0 > /proc/sys/vm/page-cluster
-echo 100 > /proc/sys/vm/swappiness
-echo 50 > /proc/sys/vm/watermark_scale_factor
+echo 150 > /proc/sys/vm/swappiness
+echo 100 > /proc/sys/vm/watermark_scale_factor
 echo 1 > /proc/sys/vm/overcommit_memory
-echo 4096 > /proc/sys/vm/min_free_kbytes
+echo 2048 > /proc/sys/vm/min_free_kbytes
 
-# Supercharge KSM Deduplication
+# Supercharge KSM Deduplication & Process Priority
 echo 1000 > /sys/kernel/mm/ksm/pages_to_scan
 echo 10 > /sys/kernel/mm/ksm/sleep_millisecs
 echo 1 > /sys/kernel/mm/ksm/run
+if pgrep -x ksmd >/dev/null; then
+    renice -n -20 -p $(pgrep -x ksmd) 2>/dev/null || true
+fi
 
 # Modern LRU
 echo y > /sys/kernel/mm/lru_gen/enabled
 echo 1000 > /sys/kernel/mm/lru_gen/min_ttl_ms 2>/dev/null || true
 
 if ! grep -q "/dev/zram0" /proc/swaps; then
+    if [ -f /sys/block/zram0/algorithm_params ]; then
+        echo "algo=zstd level=7" > /sys/block/zram0/algorithm_params 2>/dev/null || true
+    fi
     echo 350M > /sys/block/zram0/disksize
     mkswap /dev/zram0
     swapon -p 100 /dev/zram0

@@ -26,7 +26,7 @@ BUILD_DIR_HOST="${BUILD_ROOT}/tmp-host-${MC_VARIANT}/deploy/images/hyper-host-ar
 
 # --- Target Files ---
 KERNEL_IMG="${BUILD_DIR_HOST}/Image"
-ROOTFS_IMG="${BUILD_DIR_HOST}/kvmtool-host-image-${MC_VARIANT}-hyper-host-arm64.rootfs.ext4"
+ROOTFS_IMG="${BUILD_DIR_HOST}/kvmtool-host-image-${MC_VARIANT}-hyper-host-arm64.rootfs.erofs"
 BUILD_DIR_GUEST="${BUILD_ROOT}/tmp-guest/deploy/images/lkvm-arm64"
 GUEST_FS_IMG="${BUILD_DIR_GUEST}/kvmtool-guest-image-lkvm-arm64.rootfs.ext4"
 
@@ -42,7 +42,14 @@ done
 
 echo "Booting the QEMU Host..."
 
-# --- Launch QEMU ---
+CMDLINE="root=/dev/vda ro rootfstype=erofs console=ttyAMA0 iommu.passthrough=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1 sysctl.vm.min_free_kbytes=2048 sysctl.vm.watermark_boost_factor=0 sysctl.vm.watermark_scale_factor=100 sysctl.vm.extfrag_threshold=1000 sysctl.vm.swappiness=150 sysctl.vm.vfs_cache_pressure=150"
+
+if [ "$MC_VARIANT" = "zswap" ]; then
+    CMDLINE="${CMDLINE} zswap.enabled=1 zswap.max_pool_percent=60"
+elif [ "$MC_VARIANT" = "zram" ]; then
+    CMDLINE="${CMDLINE} zswap.enabled=0"
+fi
+
 qemu-system-aarch64 \
   -machine virt,virtualization=on,iommu=smmuv3,gic-version=3 \
   -cpu cortex-a57 \
@@ -65,4 +72,4 @@ qemu-system-aarch64 \
   -device usb-tablet,bus=usbbus.0 \
   -spice port=5900,disable-ticketing=on \
   -serial stdio \
-  -append "root=/dev/vda rw console=ttyAMA0 iommu.passthrough=1 nomodeset vfio_iommu_type1.allow_unsafe_interrupts=1 sysctl.vm.min_free_kbytes=2048 sysctl.vm.watermark_boost_factor=0 sysctl.vm.watermark_scale_factor=150 sysctl.vm.extfrag_threshold=1000 zswap.max_pool_percent=100"
+  -append "${CMDLINE}"
