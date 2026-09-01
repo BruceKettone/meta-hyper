@@ -34,6 +34,7 @@ exec qemu-system-aarch64 \
     -cpu host \
     -enable-kvm \
     -m 300 \
+    -daemonize \
     -smp 1 \
     -name yocto_gui_guest \
     -nographic \
