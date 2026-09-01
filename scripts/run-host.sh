@@ -29,7 +29,7 @@ BUILD_DIR_HOST="${BUILD_ROOT}/tmp-host-${MC_VARIANT}/deploy/images/hyper-host-ar
 KERNEL_IMG="${BUILD_DIR_HOST}/Image"
 ROOTFS_IMG="${BUILD_DIR_HOST}/${HYPERVISOR}-host-image-${MC_VARIANT}-hyper-host-arm64.rootfs.erofs"
 BUILD_DIR_GUEST="${BUILD_ROOT}/tmp-guest/deploy/images/lkvm-arm64"
-GUEST_FS_IMG="${BUILD_DIR_GUEST}/kvmtool-guest-image-lkvm-arm64.rootfs.ext4"
+GUEST_FS_IMG="${BUILD_DIR_GUEST}/guest-image-reference-lkvm-arm64.rootfs.ext4"
 
 # --- Pre-Flight Checks ---
 echo "Verifying boot files for ${HYPERVISOR} hypervisor host..."

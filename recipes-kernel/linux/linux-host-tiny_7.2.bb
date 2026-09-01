@@ -32,5 +32,8 @@ SRC_URI = "git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git;branch
 # Dynamically pull in the swap feature defined by the multiconfig
 SRC_URI += "${@ 'file://' + d.getVar('HOST_SWAP_FEATURE') if d.getVar('HOST_SWAP_FEATURE') else '' }"
 
+# Dynamically append guest config if built for the guest-zswap multiconfig
+SRC_URI += "${@'file://guest.cfg file://guest-kvm.cfg' if d.getVar('BB_CURRENT_MC') == 'guest-zswap' else ''}"
+
 PROVIDES += "virtual/kernel linux-host-tiny"
 COMPATIBLE_MACHINE = ".*"

@@ -7,7 +7,7 @@ IMAGE_FSTYPES = "erofs"
 IMAGE_ROOTFS_SIZE ?= "8192"
 IMAGE_ROOTFS_EXTRA_SPACE:append = "${@bb.utils.contains("DISTRO_FEATURES", "systemd", " + 4096", "", d)}"
 
-do_rootfs[mcdepends] += "mc:${BB_CURRENT_MC}:guest:kvmtool-guest-image:do_image_complete"
+do_rootfs[mcdepends] += "mc:${BB_CURRENT_MC}:guest:guest-image-reference:do_image_complete"
 
 def get_guest_machine(d):
     import re
