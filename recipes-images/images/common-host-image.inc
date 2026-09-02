@@ -1,5 +1,5 @@
 SUMMARY = "Hypervisor Host Image (Base)"
-IMAGE_INSTALL = "packagegroup-core-boot kernel-image"
+IMAGE_INSTALL = "packagegroup-core-boot kernel-image host-logger"
 IMAGE_LINGUAS = "en-us"
 LICENSE = "MIT"
 inherit core-image
