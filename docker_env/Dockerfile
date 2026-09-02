@@ -57,9 +57,9 @@ RUN git clone https://git.openembedded.org/bitbake && \
 WORKDIR /home/yoctouser/workspace/layers
 
 # 1. Clone all required Yocto repositories (master branch) into the layers directory
-RUN git clone -b master git://git.yoctoproject.org/poky && \
-    git clone -b master git://git.openembedded.org/meta-openembedded && \
-    git clone -b master git://git.yoctoproject.org/meta-virtualization && \
+RUN git clone -b master https://git.yoctoproject.org/poky && \
+    git clone -b master https://git.openembedded.org/meta-openembedded && \
+    git clone -b master https://git.yoctoproject.org/meta-virtualization && \
     git clone https://github.com/BruceKettone/meta-hyper.git meta-hyper
 
 # 2. Initialize the build environment and configure bblayers.conf non-interactively
