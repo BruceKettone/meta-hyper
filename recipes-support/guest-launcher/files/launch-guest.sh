@@ -1,5 +1,12 @@
 #!/bin/sh
 
+if [ -x /usr/bin/zram-tune ]; then
+    /usr/bin/zram-tune
+fi
+if [ -x /usr/bin/zswap-tune ]; then
+    /usr/bin/zswap-tune
+fi
+
 echo "=== Preparing VFIO Passthrough ==="
 for dev in "0000:01:00.0" "0000:00:05.0" "0000:00:07.0" "0000:00:08.0"; do
     if [ -e "/sys/bus/pci/devices/$dev" ]; then

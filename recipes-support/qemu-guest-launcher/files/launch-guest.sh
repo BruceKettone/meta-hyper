@@ -1,8 +1,11 @@
 #!/bin/sh
 
-# Dynamically apply ZRAM tuning if installed
+# Dynamically apply RAM tuning if installed
 if [ -x /usr/bin/zram-tune ]; then
     /usr/bin/zram-tune
+fi
+if [ -x /usr/bin/zswap-tune ]; then
+    /usr/bin/zswap-tune
 fi
 
 echo "=== Preparing VFIO Passthrough ==="
@@ -37,8 +40,8 @@ exec qemu-system-aarch64 \
     -daemonize \
     -smp 1 \
     -name yocto_gui_guest \
-    -nographic \
     -kernel /proc/self/fd/3 \
+    -drive file=/dev/vdb,format=raw,if=virtio \
     -device virtio-iommu-pci,boot-bypass=off \
     -device virtio-balloon-pci,free-page-reporting=on,deflate-on-oom=on \
     -device vfio-pci,host=0000:01:00.0 \

@@ -3,6 +3,7 @@
 #        host-logger stop
 
 COMMAND=$1
+TYPE=$3
 OUTFILE="${2}_${3}_${4}_metrics.csv"
 PIDFILE="/tmp/host_logger.pid"
 
@@ -10,6 +11,12 @@ if [ "$COMMAND" = "start" ]; then
     if [ -f "$PIDFILE" ]; then
         echo "Logger is already running! (PID: $(cat $PIDFILE))"
         exit 1
+    fi
+
+    mount -t tmpfs -o size=2M tmpfs /tmp
+
+    if [ "$TYPE" = "zswap" ]; then
+        mount -t debugfs none /sys/kernel/debug
     fi
 
     # New Header matching 'free' command
