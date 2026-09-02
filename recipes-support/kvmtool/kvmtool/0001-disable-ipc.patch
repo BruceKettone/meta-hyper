@@ -1,0 +1,21 @@
+Upstream-Status: Inappropriate [Configuration]
+
+diff --git a/kvm-ipc.c b/kvm-ipc.c
+index 265d80c..b0b8ba4 100644
+--- a/kvm-ipc.c
++++ b/kvm-ipc.c
+@@ -497,7 +497,7 @@ err_epoll:
+ err:
+ 	return ret;
+ }
+-base_init(kvm_ipc__init);
++// base_init(kvm_ipc__init);
+ 
+ int kvm_ipc__exit(struct kvm *kvm)
+ {
+@@ -508,4 +508,4 @@ int kvm_ipc__exit(struct kvm *kvm)
+ 
+ 	return 0;
+ }
+-base_exit(kvm_ipc__exit);
++// base_exit(kvm_ipc__exit);

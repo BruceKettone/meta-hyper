@@ -1,0 +1,429 @@
+Upstream-Status: Inappropriate [Configuration]
+
+From d8d2d417f8748fd0693fed89aa80a0f5a73bc996 Mon Sep 17 00:00:00 2001
+From: Giovanni Dalle Nogare <giovanni1.dalle@mail.polmi.it>
+Date: Tue, 25 Aug 2026 16:30:11 +0200
+Subject: [PATCH 1/8] added compile_commands.json for clangd
+
+---
+ .gitignore | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.gitignore b/.gitignore
+index e935ee5..e97c1d1 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -14,3 +14,4 @@ guest/init_stage2
+ KVMTOOLS-VERSION-FILE
+ /x86/bios/bios.bin
+ /x86/bios/bios.bin.elf
++compile_commands.json
+-- 
+2.55.0
+
+
+From dd0924a8353b4c6ecd0b72ab9be185bffac1e585 Mon Sep 17 00:00:00 2001
+From: Giovanni Dalle Nogare <giovanni1.dalle@mail.polmi.it>
+Date: Wed, 26 Aug 2026 07:14:53 +0000
+Subject: [PATCH 2/8] arm64: Add --vfio-bounce-buffer config flag
+
+---
+ arm64/include/kvm/kvm-config-arch.h | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/arm64/include/kvm/kvm-config-arch.h b/arm64/include/kvm/kvm-config-arch.h
+index d8a8ef7..7c8f9f3 100644
+--- a/arm64/include/kvm/kvm-config-arch.h
++++ b/arm64/include/kvm/kvm-config-arch.h
+@@ -21,6 +21,7 @@ struct kvm_config_arch {
+ 	bool		psci;
+ 	bool		protected;
+ 	bool		guest_memfd;
++	unsigned int	vfio_bounce_buffer_mb;
+ };
+ 
+ int irqchip_parser(const struct option *opt, const char *arg, int unset);
+@@ -76,6 +77,8 @@ int sve_vl_parser(const struct option *opt, const char *arg, int unset);
+ 	OPT_BOOLEAN('\0', "protected", &(cfg)->protected,			\
+ 			"Create a protected VM when pKVM is enabled"),		\
+ 	OPT_BOOLEAN('\0', "guest-memfd", &(cfg)->guest_memfd,			\
+-			"Use guest_memfd to back guest RAM"),
++			"Use guest_memfd to back guest RAM"),			\
++	OPT_UINTEGER('\0', "vfio-bounce-buffer", &(cfg)->vfio_bounce_buffer_mb,	\
++			"Size in MB of the VFIO bounce buffer"),
+ 
+ #endif /* ARM_COMMON__KVM_CONFIG_ARCH_H */
+-- 
+2.55.0
+
+
+From 0baafab184c8a891801db71001a76fdd604c0b0e Mon Sep 17 00:00:00 2001
+From: Giovanni Dalle Nogare <giovanni1.dalle@mail.polmi.it>
+Date: Wed, 26 Aug 2026 07:46:57 +0000
+Subject: [PATCH 3/8] arm64: Add validation for vfio_bounce_buffer_mb
+
+---
+ arm64/kvm.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arm64/kvm.c b/arm64/kvm.c
+index 36b3284..576c06c 100644
+--- a/arm64/kvm.c
++++ b/arm64/kvm.c
+@@ -499,6 +499,13 @@ void kvm__arch_validate_cfg(struct kvm *kvm)
+ 		if (kvm->cfg.hugetlbfs_path)
+ 			die("guest_memfd cannot be backed by hugetlbfs");
+ 	}
++	if (kvm->cfg.arch.vfio_bounce_buffer_mb) {
++		u64 bounce_size = (u64)kvm->cfg.arch.vfio_bounce_buffer_mb << 20;
++		if (kvm->cfg.ram_size && kvm->cfg.ram_size <= bounce_size) {
++			die("RAM size (0x%llx) must be larger than VFIO bounce region (0x%llx)",
++			    kvm->cfg.ram_size, bounce_size);
++		}
++	}
+ 
+ 	if (kvm->cfg.arch.protected) {
+ 		if (kvm->cfg.ram_size &&
+-- 
+2.55.0
+
+
+From bb3b7ea5a56d9b1e0b6e03938ed2cd99b079fa0a Mon Sep 17 00:00:00 2001
+From: Giovanni Dalle Nogare <giovanni1.dalle@mail.polmi.it>
+Date: Wed, 26 Aug 2026 11:31:24 +0000
+Subject: [PATCH 4/8] arm64: Inject vfio_bounce_buffer_mb into FDT
+
+---
+ Makefile    |  2 +-
+ arm64/fdt.c | 14 ++++++++++++--
+ 2 files changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 1c0e7f5..32cfaf7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -367,7 +367,7 @@ ifeq (y,$(ARCH_WANT_LIBFDT))
+ 		LIBS_DYNOPT	+= -lfdt
+ 		LIBS_STATOPT	+= -lfdt
+ 	else
+-                $(error No libfdt found. Please install libfdt-dev package or set LIBFDT_DIR)
++#                $(error No libfdt found. Please install libfdt-dev package or set LIBFDT_DIR)
+ 	endif
+ endif
+ 
+diff --git a/arm64/fdt.c b/arm64/fdt.c
+index 3cbd36e..e6e94c5 100644
+--- a/arm64/fdt.c
++++ b/arm64/fdt.c
+@@ -130,7 +130,7 @@ static int setup_fdt(struct kvm *kvm)
+ 					= kvm->cpus[0]->generate_fdt_nodes;
+ 
+ 	/* Generate DMA regions for bouncing in protected VMs */
+-	emit_dma_regions = kvm->cfg.arch.protected;
++	emit_dma_regions = kvm->cfg.arch.protected || kvm->cfg.arch.vfio_bounce_buffer_mb;
+ 
+ 	/* Create new tree without a reserve map */
+ 	_FDT(fdt_create(fdt, FDT_MAX_SIZE));
+@@ -180,6 +180,8 @@ static int setup_fdt(struct kvm *kvm)
+ 
+ 	/* Reserved memory (restricted DMA pool) */
+ 	if (emit_dma_regions) {
++		u64 pool_size = DMA_MEM_REGION_SIZE;
++
+ 		_FDT(fdt_begin_node(fdt, "reserved-memory"));
+ 		_FDT(fdt_property_cell(fdt, "#address-cells", 0x2));
+ 		_FDT(fdt_property_cell(fdt, "#size-cells", 0x2));
+@@ -187,7 +189,15 @@ static int setup_fdt(struct kvm *kvm)
+ 
+ 		_FDT(fdt_begin_node(fdt, "restricted_dma_reserved"));
+ 		_FDT(fdt_property_string(fdt, "compatible", "restricted-dma-pool"));
+-		resv_mem_prop = cpu_to_fdt64(DMA_MEM_REGION_SIZE);
++
++		if (kvm->cfg.arch.vfio_bounce_buffer_mb) {
++			pool_size = (u64)kvm->cfg.arch.vfio_bounce_buffer_mb << 20;
++			u64 pool_addr = kvm->arch.memory_guest_start + kvm->ram_size - pool_size;
++			u64 alloc_ranges[2] = { cpu_to_fdt64(pool_addr), cpu_to_fdt64(pool_size) };
++			_FDT(fdt_property(fdt, "alloc-ranges", alloc_ranges, sizeof(alloc_ranges)));
++		}
++
++		resv_mem_prop = cpu_to_fdt64(pool_size);
+ 		_FDT(fdt_property(fdt, "size", &resv_mem_prop, sizeof(resv_mem_prop)));
+ 		_FDT(fdt_property_cell(fdt, "phandle", PHANDLE_DMA));
+ 		_FDT(fdt_end_node(fdt));
+-- 
+2.55.0
+
+
+From f14b470727751a265cc9f42c113dce8a3f7a836b Mon Sep 17 00:00:00 2001
+From: Giovanni Dalle Nogare <giovanni1.dalle@mail.polmi.it>
+Date: Wed, 26 Aug 2026 17:52:41 +0000
+Subject: [PATCH 5/8] vfio: filter dma map for bounce buffer
+
+---
+ vfio/core.c | 49 +++++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 43 insertions(+), 6 deletions(-)
+
+diff --git a/vfio/core.c b/vfio/core.c
+index fbe0098..4ecc5f3 100644
+--- a/vfio/core.c
++++ b/vfio/core.c
+@@ -364,15 +364,47 @@ static int vfio_get_iommu_type(void)
+ 	return -ENODEV;
+ }
+ 
++static int vfio_get_bounce_buffer_overlap(struct kvm *kvm, struct kvm_mem_bank *bank,
++					  u64 *overlap_start, u64 *overlap_size)
++{
++#ifdef CONFIG_ARM64
++	if (kvm->cfg.arch.vfio_bounce_buffer_mb) {
++		u64 pool_size = (u64)kvm->cfg.arch.vfio_bounce_buffer_mb << 20;
++		u64 pool_start = kvm->arch.memory_guest_start + kvm->ram_size - pool_size;
++		u64 pool_end   = pool_start + pool_size;
++		
++		u64 bank_start = bank->guest_phys_addr;
++		u64 bank_end   = bank_start + bank->size;
++		
++		*overlap_start = (bank_start > pool_start) ? bank_start : pool_start;
++		u64 end = (bank_end < pool_end) ? bank_end : pool_end;
++		
++		if (*overlap_start < end) {
++			*overlap_size = end - *overlap_start;
++			return 1;
++		}
++		return 0;
++	}
++#endif
++	*overlap_start = bank->guest_phys_addr;
++	*overlap_size  = bank->size;
++	return 1;
++}
++
+ static int vfio_map_mem_bank(struct kvm *kvm, struct kvm_mem_bank *bank, void *data)
+ {
+ 	int ret = 0;
++	u64 overlap_start, overlap_size;
++
++	if (!vfio_get_bounce_buffer_overlap(kvm, bank, &overlap_start, &overlap_size))
++		return 0;
++
+ 	struct vfio_iommu_type1_dma_map dma_map = {
+ 		.argsz	= sizeof(dma_map),
+ 		.flags	= VFIO_DMA_MAP_FLAG_READ | VFIO_DMA_MAP_FLAG_WRITE,
+-		.vaddr	= (unsigned long)bank->host_addr,
+-		.iova	= (u64)bank->guest_phys_addr,
+-		.size	= bank->size,
++		.vaddr	= (unsigned long)bank->host_addr + (overlap_start - bank->guest_phys_addr),
++		.iova	= overlap_start,
++		.size	= overlap_size,
+ 	};
+ 
+ 	/* Map the guest memory for DMA (i.e. provide isolation) */
+@@ -387,10 +419,15 @@ static int vfio_map_mem_bank(struct kvm *kvm, struct kvm_mem_bank *bank, void *d
+ 
+ static int vfio_unmap_mem_bank(struct kvm *kvm, struct kvm_mem_bank *bank, void *data)
+ {
++	u64 overlap_start, overlap_size;
++
++	if (!vfio_get_bounce_buffer_overlap(kvm, bank, &overlap_start, &overlap_size))
++		return 0;
++
+ 	struct vfio_iommu_type1_dma_unmap dma_unmap = {
+-		.argsz = sizeof(dma_unmap),
+-		.size = bank->size,
+-		.iova = bank->guest_phys_addr,
++		.argsz	= sizeof(dma_unmap),
++		.iova	= overlap_start,
++		.size	= overlap_size,
+ 	};
+ 
+ 	ioctl(vfio_container, VFIO_IOMMU_UNMAP_DMA, &dma_unmap);
+-- 
+2.55.0
+
+
+From 48203a0c9b8414de3cab113996c03c7e71e49c94 Mon Sep 17 00:00:00 2001
+From: Giovanni Dalle Nogare <giovanni1.dalle@mail.polmi.it>
+Date: Wed, 26 Aug 2026 23:02:51 +0000
+Subject: [PATCH 6/8] arm64: fdt: inject linux,swiotlb for bounce buffer
+
+---
+ arm64/fdt.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arm64/fdt.c b/arm64/fdt.c
+index e6e94c5..c7c2d80 100644
+--- a/arm64/fdt.c
++++ b/arm64/fdt.c
+@@ -195,6 +195,7 @@ static int setup_fdt(struct kvm *kvm)
+ 			u64 pool_addr = kvm->arch.memory_guest_start + kvm->ram_size - pool_size;
+ 			u64 alloc_ranges[2] = { cpu_to_fdt64(pool_addr), cpu_to_fdt64(pool_size) };
+ 			_FDT(fdt_property(fdt, "alloc-ranges", alloc_ranges, sizeof(alloc_ranges)));
++			_FDT(fdt_property(fdt, "linux,swiotlb", NULL, 0));
+ 		}
+ 
+ 		resv_mem_prop = cpu_to_fdt64(pool_size);
+-- 
+2.55.0
+
+
+From a333798b8b157ee8f262c27e1d56e819c641e4eb Mon Sep 17 00:00:00 2001
+From: Giovanni Dalle Nogare <giovanni1.dalle@mail.polmi.it>
+Date: Thu, 27 Aug 2026 00:32:42 +0000
+Subject: [PATCH 7/8] arm64: vfio: use shared-dma-pool with reg property and
+ 2MB offset
+
+---
+ arm64/fdt.c | 35 ++++++++++++++++++++---------------
+ vfio/core.c |  2 +-
+ 2 files changed, 21 insertions(+), 16 deletions(-)
+
+diff --git a/arm64/fdt.c b/arm64/fdt.c
+index c7c2d80..ef61758 100644
+--- a/arm64/fdt.c
++++ b/arm64/fdt.c
+@@ -130,7 +130,7 @@ static int setup_fdt(struct kvm *kvm)
+ 					= kvm->cpus[0]->generate_fdt_nodes;
+ 
+ 	/* Generate DMA regions for bouncing in protected VMs */
+-	emit_dma_regions = kvm->cfg.arch.protected || kvm->cfg.arch.vfio_bounce_buffer_mb;
++	emit_dma_regions = kvm->cfg.arch.protected;
+ 
+ 	/* Create new tree without a reserve map */
+ 	_FDT(fdt_create(fdt, FDT_MAX_SIZE));
+@@ -179,30 +179,35 @@ static int setup_fdt(struct kvm *kvm)
+ 	_FDT(fdt_end_node(fdt));
+ 
+ 	/* Reserved memory (restricted DMA pool) */
+-	if (emit_dma_regions) {
+-		u64 pool_size = DMA_MEM_REGION_SIZE;
+-
++	if (emit_dma_regions || kvm->cfg.arch.vfio_bounce_buffer_mb) {
+ 		_FDT(fdt_begin_node(fdt, "reserved-memory"));
+ 		_FDT(fdt_property_cell(fdt, "#address-cells", 0x2));
+ 		_FDT(fdt_property_cell(fdt, "#size-cells", 0x2));
+ 		_FDT(fdt_property(fdt, "ranges", NULL, 0));
+ 
+-		_FDT(fdt_begin_node(fdt, "restricted_dma_reserved"));
+-		_FDT(fdt_property_string(fdt, "compatible", "restricted-dma-pool"));
++		if (emit_dma_regions) {
++			u64 pool_size = DMA_MEM_REGION_SIZE;
++			_FDT(fdt_begin_node(fdt, "restricted_dma_reserved"));
++			_FDT(fdt_property_string(fdt, "compatible", "restricted-dma-pool"));
++			resv_mem_prop = cpu_to_fdt64(pool_size);
++			_FDT(fdt_property(fdt, "size", &resv_mem_prop, sizeof(resv_mem_prop)));
++			_FDT(fdt_property_cell(fdt, "phandle", PHANDLE_DMA));
++			_FDT(fdt_end_node(fdt));
++		}
+ 
+ 		if (kvm->cfg.arch.vfio_bounce_buffer_mb) {
+-			pool_size = (u64)kvm->cfg.arch.vfio_bounce_buffer_mb << 20;
+-			u64 pool_addr = kvm->arch.memory_guest_start + kvm->ram_size - pool_size;
+-			u64 alloc_ranges[2] = { cpu_to_fdt64(pool_addr), cpu_to_fdt64(pool_size) };
+-			_FDT(fdt_property(fdt, "alloc-ranges", alloc_ranges, sizeof(alloc_ranges)));
++			u64 pool_size = (u64)kvm->cfg.arch.vfio_bounce_buffer_mb << 20;
++			/* Shift down by 0x200000 (2MB) to prevent FDT collision */
++			u64 pool_addr = kvm->arch.memory_guest_start + kvm->ram_size - pool_size - 0x200000;
++			u64 pool_reg[2] = { cpu_to_fdt64(pool_addr), cpu_to_fdt64(pool_size) };
++
++			_FDT(fdt_begin_node(fdt, "shared_dma_reserved"));
++			_FDT(fdt_property_string(fdt, "compatible", "shared-dma-pool"));
++			_FDT(fdt_property(fdt, "reg", pool_reg, sizeof(pool_reg)));
+ 			_FDT(fdt_property(fdt, "linux,swiotlb", NULL, 0));
++			_FDT(fdt_end_node(fdt));
+ 		}
+ 
+-		resv_mem_prop = cpu_to_fdt64(pool_size);
+-		_FDT(fdt_property(fdt, "size", &resv_mem_prop, sizeof(resv_mem_prop)));
+-		_FDT(fdt_property_cell(fdt, "phandle", PHANDLE_DMA));
+-		_FDT(fdt_end_node(fdt));
+-
+ 		_FDT(fdt_end_node(fdt));
+ 	}
+ 
+diff --git a/vfio/core.c b/vfio/core.c
+index 4ecc5f3..14d05ee 100644
+--- a/vfio/core.c
++++ b/vfio/core.c
+@@ -370,7 +370,7 @@ static int vfio_get_bounce_buffer_overlap(struct kvm *kvm, struct kvm_mem_bank *
+ #ifdef CONFIG_ARM64
+ 	if (kvm->cfg.arch.vfio_bounce_buffer_mb) {
+ 		u64 pool_size = (u64)kvm->cfg.arch.vfio_bounce_buffer_mb << 20;
+-		u64 pool_start = kvm->arch.memory_guest_start + kvm->ram_size - pool_size;
++		u64 pool_start = kvm->arch.memory_guest_start + kvm->ram_size - pool_size - 0x200000;
+ 		u64 pool_end   = pool_start + pool_size;
+ 		
+ 		u64 bank_start = bank->guest_phys_addr;
+-- 
+2.55.0
+
+
+From ecec08de142762c750a4a74a3d396efd703cc4c0 Mon Sep 17 00:00:00 2001
+From: Giovanni Dalle Nogare <giovanni1.dalle@mail.polmi.it>
+Date: Thu, 27 Aug 2026 01:21:11 +0000
+Subject: [PATCH 8/8] arm64: fdt: strictly tie restricted-dma-pool to
+ emit_dma_regions
+
+---
+ arm64/fdt.c | 26 ++++++++++----------------
+ 1 file changed, 10 insertions(+), 16 deletions(-)
+
+diff --git a/arm64/fdt.c b/arm64/fdt.c
+index ef61758..afbd58a 100644
+--- a/arm64/fdt.c
++++ b/arm64/fdt.c
+@@ -130,7 +130,7 @@ static int setup_fdt(struct kvm *kvm)
+ 					= kvm->cpus[0]->generate_fdt_nodes;
+ 
+ 	/* Generate DMA regions for bouncing in protected VMs */
+-	emit_dma_regions = kvm->cfg.arch.protected;
++	emit_dma_regions = kvm->cfg.arch.protected || kvm->cfg.arch.vfio_bounce_buffer_mb;
+ 
+ 	/* Create new tree without a reserve map */
+ 	_FDT(fdt_create(fdt, FDT_MAX_SIZE));
+@@ -179,34 +179,28 @@ static int setup_fdt(struct kvm *kvm)
+ 	_FDT(fdt_end_node(fdt));
+ 
+ 	/* Reserved memory (restricted DMA pool) */
+-	if (emit_dma_regions || kvm->cfg.arch.vfio_bounce_buffer_mb) {
++	if (emit_dma_regions) {
+ 		_FDT(fdt_begin_node(fdt, "reserved-memory"));
+ 		_FDT(fdt_property_cell(fdt, "#address-cells", 0x2));
+ 		_FDT(fdt_property_cell(fdt, "#size-cells", 0x2));
+ 		_FDT(fdt_property(fdt, "ranges", NULL, 0));
+ 
+-		if (emit_dma_regions) {
+-			u64 pool_size = DMA_MEM_REGION_SIZE;
+-			_FDT(fdt_begin_node(fdt, "restricted_dma_reserved"));
+-			_FDT(fdt_property_string(fdt, "compatible", "restricted-dma-pool"));
+-			resv_mem_prop = cpu_to_fdt64(pool_size);
+-			_FDT(fdt_property(fdt, "size", &resv_mem_prop, sizeof(resv_mem_prop)));
+-			_FDT(fdt_property_cell(fdt, "phandle", PHANDLE_DMA));
+-			_FDT(fdt_end_node(fdt));
+-		}
++		_FDT(fdt_begin_node(fdt, "restricted_dma_reserved"));
++		_FDT(fdt_property_string(fdt, "compatible", "restricted-dma-pool"));
+ 
+ 		if (kvm->cfg.arch.vfio_bounce_buffer_mb) {
+ 			u64 pool_size = (u64)kvm->cfg.arch.vfio_bounce_buffer_mb << 20;
+ 			/* Shift down by 0x200000 (2MB) to prevent FDT collision */
+ 			u64 pool_addr = kvm->arch.memory_guest_start + kvm->ram_size - pool_size - 0x200000;
+ 			u64 pool_reg[2] = { cpu_to_fdt64(pool_addr), cpu_to_fdt64(pool_size) };
+-
+-			_FDT(fdt_begin_node(fdt, "shared_dma_reserved"));
+-			_FDT(fdt_property_string(fdt, "compatible", "shared-dma-pool"));
+ 			_FDT(fdt_property(fdt, "reg", pool_reg, sizeof(pool_reg)));
+-			_FDT(fdt_property(fdt, "linux,swiotlb", NULL, 0));
+-			_FDT(fdt_end_node(fdt));
++		} else {
++			u64 pool_size = DMA_MEM_REGION_SIZE;
++			resv_mem_prop = cpu_to_fdt64(pool_size);
++			_FDT(fdt_property(fdt, "size", &resv_mem_prop, sizeof(resv_mem_prop)));
+ 		}
++		_FDT(fdt_property_cell(fdt, "phandle", PHANDLE_DMA));
++		_FDT(fdt_end_node(fdt));
+ 
+ 		_FDT(fdt_end_node(fdt));
+ 	}
+-- 
+2.55.0
+

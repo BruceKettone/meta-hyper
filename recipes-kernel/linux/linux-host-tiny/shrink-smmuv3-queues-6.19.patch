@@ -1,0 +1,25 @@
+From: Yocto User <yoctouser@workspace.local>
+Date: Fri, 21 Aug 2026 00:00:00 +0000
+Subject: [PATCH] iommu/arm-smmu-v3: shrink queues for embedded microvisor
+
+Dramatically shrink the memory allocated for ARM SMMUv3 hardware queues,
+freeing ~8 MB of RAM on boot. This is highly specific to our static VFIO context.
+
+Upstream-Status: Inappropriate [embedded hypervisor optimization]
+
+---
+ drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+--- a/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
++++ b/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c
+@@ -150,7 +150,7 @@
+ /*
+  * Queues
+  */
+-#define Q_MAX_SZ_SHIFT			19
++#define Q_MAX_SZ_SHIFT			11
+ 
+ #define Q_BASE_RWA			(1UL << 62)
+ #define Q_BASE_ADDR_MASK		GENMASK_ULL(51, 5)

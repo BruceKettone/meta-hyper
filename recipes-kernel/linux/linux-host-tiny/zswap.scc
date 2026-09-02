@@ -1,0 +1,9 @@
+define KFEATURE_DESCRIPTION "Enable ZSWAP Virtual Swap Space"
+define KFEATURE_COMPATIBILITY all
+
+# Apply the monolithic mm-unstable diff to perfectly match the v3 patch baseline
+patch mm-unstable.patch
+
+# Apply the Nhat Pham 'Swap Table Edition' (v3) out-of-tree patches before configuration
+patch vswap-v3.patch
+kconf non-hardware zswap.cfg
