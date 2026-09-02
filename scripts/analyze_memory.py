@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 # ==========================================
 # 1. Configuration & Data Loading
 # ==========================================
-HOST_CSV = "sample_data/host_metrics.csv"
-GUEST_CSV = "sample_data/guest_metrics.csv"
+HOST_CSV = "sample_data/host_metrics_idle.csv"
+GUEST_CSV = "sample_data/guest_metrics_idle.csv"
 ENGINE = "zram"
 RAM_HOST_MB = 128
 RAM_GUEST_MB = 300
