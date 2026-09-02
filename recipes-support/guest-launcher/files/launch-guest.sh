@@ -16,16 +16,6 @@ echo "=== Preparing Guest Kernel (FD Trick) ==="
 exec 3< /guest-Image
 rm -f /guest-Image
 
-echo "=== Enabling KSM (Kernel Samepage Merging) ==="
-if [ -d /sys/kernel/mm/ksm ]; then
-    echo 100 > /sys/kernel/mm/ksm/pages_to_scan
-    echo 200 > /sys/kernel/mm/ksm/sleep_millisecs
-    echo 1 > /sys/kernel/mm/ksm/run
-fi
-
-echo "=== Spawning Sysfs & TempFS Reclamation Daemon ==="
-# ( sleep 5; umount -l /sys 2>/dev/null; umount -l /run 2>/dev/null; umount -l /var/volatile 2>/dev/null; echo 2 > /proc/sys/vm/drop_caches ) &
-
 echo "=== Launching Nested Guest (lkvm) ==="
 exec lkvm run --debug \
     -k /proc/self/fd/3 \

@@ -12,41 +12,45 @@ if [ "$COMMAND" = "start" ]; then
         exit 1
     fi
 
-    echo "timestamp_rel,mem_free,mem_slab,ksm_sharing,pgmajfault,engine_pool,engine_stored,engine_rejected" > $OUTFILE
+    # New Header matching 'free' command
+    echo "timestamp_rel,host_total,host_used,host_free,host_buff_cache,host_avail,mem_slab,engine_pool,engine_stored,hyp_rss, hyp_tot" > $OUTFILE
 
-    # Wait loop so you can perfectly sync with the guest
     echo "Ready. Press [ENTER] to capture T=0 and detach to background..."
     read dummy
     START_TIME=$(awk '{print $1}' /proc/uptime)
 
-    # Launch the actual logging loop into the background
     (
         while true; do
             NOW=$(awk '{print $1}' /proc/uptime)
             T_REL=$(awk "BEGIN {printf \"%.2f\", $NOW - $START_TIME}")
 
-            MEM_FREE=$(awk '/MemFree/ {print $2}' /proc/meminfo)
+            # Execute 'free' once and map column 2(Total), 3(Used), 4(Free), 6(Buff/Cache), 7(Available)
+            eval $(free | awk '/^Mem:/ {printf "H_TOT=%s; H_USE=%s; H_FRE=%s; H_BUF=%s; H_AVL=%s", $2, $3, $4, $6, $7}')
+
             MEM_SLAB=$(awk '/Slab/ {print $2}' /proc/meminfo)
-            KSM_SHARING=$(cat /sys/kernel/mm/ksm/pages_sharing 2>/dev/null || echo 0)
-            PG_MAJFAULT=$(awk '/pgmajfault/ {print $2}' /proc/vmstat 2>/dev/null || echo 0)
+
+            HYP_PID=$(pgrep "$4" | head -n 1)
+            if [ -n "$HYP_PID" ]; then
+                HYP_RSS=$(awk '/VmRSS/ {print $2}' /proc/$HYP_PID/status 2>/dev/null || echo 0)
+                HYP_TOT=$(awk '/VmSize/ {print $2}' /proc/$HYP_PID/status 2>/dev/null || echo 0)
+            else
+                HYP_RSS=0
+            fi
 
             if [ "$3" = "zswap" ]; then
                 ENG_POOL=$(cat /sys/kernel/debug/zswap/pool_total_size 2>/dev/null || echo 0)
                 ENG_STORED=$(cat /sys/kernel/debug/zswap/stored_pages 2>/dev/null || echo 0)
-                ENG_REJ=$(cat /sys/kernel/debug/zswap/reject_compress_poor 2>/dev/null || echo 0)
             else
                 ZSTAT=$(cat /sys/block/zram0/mm_stat 2>/dev/null || echo "0 0 0 0 0")
                 ENG_STORED=$(echo $ZSTAT | awk '{print $1}')
                 ENG_POOL=$(echo $ZSTAT | awk '{print $3}')
-                ENG_REJ=0
             fi
 
-            echo "$T_REL,$MEM_FREE,$MEM_SLAB,$KSM_SHARING,$PG_MAJFAULT,$ENG_POOL,$ENG_STORED,$ENG_REJ" >> $OUTFILE
+            echo "$T_REL,$H_TOT,$H_USE,$H_FRE,$H_BUF,$H_AVL,$MEM_SLAB,$ENG_POOL,$ENG_STORED,$HYP_RSS, $HYP_TOT" >> $OUTFILE
             sleep 1
         done
     ) >/dev/null 2>&1 &
 
-    # Save the PID of the background job
     echo $! > $PIDFILE
     echo "Logging detached. Terminal is yours. Run 'host-logger stop' to end."
 

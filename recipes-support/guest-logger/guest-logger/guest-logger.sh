@@ -12,32 +12,28 @@ if [ "$COMMAND" = "start" ]; then
         exit 1
     fi
 
-    echo echo "timestamp_rel,mem_total,mem_available,anon_pages,pgmajfault,psi_mem_full,oom_kills" > $OUTFILE
-    OOM_BASE=$(awk '/oom_kill/ {print $2}' /proc/vmstat 2>/dev/null || echo 0)
+    # New Header matching 'free' command
+    echo "timestamp_rel,guest_total,guest_used,guest_free,guest_buff_cache,guest_avail,anon_pages" > $OUTFILE
 
-    # Wait loop so you can perfectly sync with the host
     echo "Ready. Press [ENTER] to capture T=0 and detach to background..."
     read dummy
     START_TIME=$(awk '{print $1}' /proc/uptime)
 
-    # Launch the actual logging loop into the background
     (
         while true; do
             NOW=$(awk '{print $1}' /proc/uptime)
             T_REL=$(awk "BEGIN {printf \"%.2f\", $NOW - $START_TIME}")
 
-            MEM_TOTAL=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
-            MEM_AVAIL=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)
-            ANON_PAGES=$(awk '/AnonPages/ {print $2}' /proc/meminfo)
-            OOM_CURRENT=$(dmesg | grep -c "Out of memory")
-            OOM_DELTA=$((OOM_CURRENT - OOM_BASE))
+            # Execute 'free' once and map columns
+            eval $(free | awk '/^Mem:/ {printf "G_TOT=%s; G_USE=%s; G_FRE=%s; G_BUF=%s; G_AVL=%s", $2, $3, $4, $6, $7}')
 
-            echo "$T_REL,$MEM_TOTAL,$MEM_AVAIL,$ANON_PAGES,$OOM_DELTA" >> $OUTFILE
+            ANON_PAGES=$(awk '/AnonPages/ {print $2}' /proc/meminfo)
+
+            echo "$T_REL,$G_TOT,$G_USE,$G_FRE,$G_BUF,$G_AVL,$ANON_PAGES" >> $OUTFILE
             sleep 1
         done
     ) >/dev/null 2>&1 &
 
-    # Save the Process ID (PID) of the background job
     echo $! > $PIDFILE
     echo "Logging detached. Terminal is yours. Run 'guest-logger stop' to end."
 
