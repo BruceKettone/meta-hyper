@@ -35,5 +35,10 @@ SRC_URI += "${@ 'file://' + d.getVar('HOST_SWAP_FEATURE') if d.getVar('HOST_SWAP
 # Dynamically append guest config if built for the guest-zswap multiconfig
 SRC_URI += "${@'file://guest.cfg file://guest-kvm.cfg' if d.getVar('BB_CURRENT_MC') == 'guest-zswap' else ''}"
 
+# Dynamically append yocto-kernel-cache metadata when built for guest-zswap multiconfig
+KMETA = "${@'kernel-meta' if d.getVar('BB_CURRENT_MC') == 'guest-zswap' else ''}"
+SRCREV_meta = "${@'7b09e5efab49e4bae0c69f7f2c65b4df00e9c565' if d.getVar('BB_CURRENT_MC') == 'guest-zswap' else ''}"
+SRC_URI += "${@'git://git.yoctoproject.org/yocto-kernel-cache;type=kmeta;name=meta;branch=yocto-6.18;destsuffix=kernel-meta;protocol=https' if d.getVar('BB_CURRENT_MC') == 'guest-zswap' else ''}"
+
 PROVIDES += "virtual/kernel linux-host-tiny"
 COMPATIBLE_MACHINE = ".*"
