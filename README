@@ -1,41 +1,70 @@
-This README file contains information on the contents of the meta-hyper layer.
+# meta-hyper
 
-Please see the corresponding sections below for details.
+`meta-hyper` is a custom Yocto layer designed for low-footprint ARM64 micro-hypervisor environments. It pairs an ultra-lean host kernel (`tinyconfig` baseline) with in-memory page compression mechanisms (`zram` and `zswap`), hardware passthrough (VFIO), and automated memory metric collection.
 
-Dependencies
-============
+---
 
-  URI: <first dependency>
-  branch: <branch name>
+## 📁 Repository Structure
 
-  URI: <second dependency>
-  branch: <branch name>
+* **`conf/`**: Layer and multiconfig settings (`layer.conf` and `multiconfig/` target configs for host and guest variants).
+* **`docker_env/`**: Docker build environment.
+  * **`Dockerfile`**: Pre-configured Ubuntu 24.04 build image with Yocto dependencies and pre-cloned layers.
+  * **`run-docker.sh`**: Bash launcher script for the Docker build container.
+  * **`run-docker.fish`**: Fish shell launcher script for the Docker build container.
+* **`recipes-images/`**: Image recipes for host hypervisors (`kvmtool`, `qemu`) and guest variants (`reference`, `zram`, `zswap`).
+* **`recipes-kernel/`**: Custom Linux kernel recipes (`linux-host-tiny`) and modular `.cfg`/`.scc` fragments (`minimal-boot`, `lkvm-enablement`, `guest`, `zswap`).
+* **`recipes-support/`**: Helper packages including hypervisor launchers (`guest-launcher`, `qemu-guest-launcher`), memory tuning daemons (`zram-tune`, `zswap-tune`), and metric loggers (`standalone-logger`).
+* **`scripts/`**:
+  * **`run-host.sh`**: Launches the host micro-hypervisor in QEMU.
+  * **`run-standalone.sh`**: Launches standalone guest images in QEMU.
+  * **`analyze_memory.py`**: Generates memory stackplots for host-hypervisor benchmark runs.
+  * **`analyze_memory_standalone.py`**: Generates memory stackplots for standalone guest benchmark runs.
+* **`test_results/`**: Benchmark metrics CSV files and generated visualization charts.
+* **`COPYING.MIT`**: MIT License file.
+* **`README`**: Overview, directory structure, and quickstart usage tutorial.
 
-  .
-  .
-  .
+---
 
-Patches
-=======
+## 🚀 Quickstart Tutorial
 
-Please submit any patches against the meta-hyper layer to the xxxx mailing list (xxxx@zzzz.org)
-and cc: the maintainer:
+### 1. Build Environment Setup (Docker)
+Build and enter the reproducible Yocto build container:
+```bash
+cd docker_env
+./run-docker.sh   # or ./run-docker.fish
+```
 
-Maintainer: XXX YYYYYY <xxx.yyyyyy@zzzzz.com>
+Inside the container, initialize BitBake and start a build:
+```bash
+source workspace/layers/poky/oe-init-build-env workspace/build
+bitbake mc:guest-zswap:guest-image-zswap
+```
 
-Table of Contents
-=================
+### 2. Booting Standalone Guest
+To boot a standalone guest variant directly in QEMU:
+```bash
+./scripts/run-standalone.sh [reference|zram|zswap] [RAM_MB]
+# Example:
+./scripts/run-standalone.sh zswap 300
+```
 
-  I. Adding the meta-hyper layer to your build
- II. Misc
+### 3. Booting Host Micro-Hypervisor
+To boot the full host hypervisor environment running nested guests:
+```bash
+./scripts/run-host.sh [kvmtool|qemu] [reference|zram|zswap] [HOST_RAM_MB]
+# Example:
+./scripts/run-host.sh kvmtool zswap 1024
+```
 
+### 4. Memory Metrics & Stackplot Analysis
+Collect metrics inside the guest using `standalone-logger`:
+```bash
+standalone-logger start /tmp/run_standalone zswap
+# Perform benchmark workload, then stop:
+standalone-logger stop
+```
 
-I. Adding the meta-hyper layer to your build
-=================================================
-
-Run 'bitbake-layers add-layer meta-hyper'
-
-II. Misc
-========
-
---- replace with specific information about the meta-hyper layer ---
+Process and visualize the resulting CSV file on the host:
+```bash
+python3 scripts/analyze_memory_standalone.py /tmp/run_standalone_zswap_metrics.csv chart.png
+```
