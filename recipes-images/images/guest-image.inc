@@ -26,7 +26,8 @@ IMAGE_INSTALL = "packagegroup-core-boot \
                  time-sync \
                  web-search \
                  play-video \
-                 guest-logger"
+                 guest-logger \
+                 standalone-logger"
 
 IMAGE_LINGUAS = ""
 LICENSE = "MIT"
