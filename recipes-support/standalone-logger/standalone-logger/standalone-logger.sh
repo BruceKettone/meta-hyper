@@ -32,6 +32,9 @@ if [ "$COMMAND" = "start" ]; then
 
             # Handle the three configurations: basic(none), zram, zswap
             if [ "$3" = "zswap" ]; then
+                if ! mountpoint -q /sys/kernel/debug 2>/dev/null; then
+                    mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+                fi
                 ENG_POOL=$(cat /sys/kernel/debug/zswap/pool_total_size 2>/dev/null || echo 0)
                 ENG_STORED=$(cat /sys/kernel/debug/zswap/stored_pages 2>/dev/null || echo 0)
             elif [ "$3" = "zram" ]; then
