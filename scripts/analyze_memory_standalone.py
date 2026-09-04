@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 # ==========================================
 # 1. Configuration & Data Loading
 # ==========================================
-CSV_FILE = "sample_data/run1_zram_metrics.csv"
-ENGINE = "zram"
+CSV_FILE = "sample_data/guest-only_metrics_sankey.csv"
+ENGINE = "zswap"
 RAM_PHYSICAL_MB = 128
 
 df = pd.read_csv(CSV_FILE)
@@ -48,6 +48,15 @@ df['os_overhead_mb'] = (RAM_PHYSICAL_MB - df['mem_total_mb']).clip(lower=0)
 # We isolate all uncompressed RAM used by processes and kernel structures combined.
 df['uncompressed_used_mb'] = (df['mem_used_mb'] - df['engine_pool_mb']).clip(lower=0)
 
+#Calculate Mean Values for Sankey
+# Averages out the time-series data into static blocks
+means = [
+    df['os_overhead_mb'].mean(),
+    df['mem_buff_cache_mb'].mean(),
+    df['engine_pool_mb'].mean(),
+    df['uncompressed_used_mb'].mean(),
+    df['mem_free_mb'].mean()
+]
 
 # ==========================================
 # 4. Generating Publication Plots
@@ -108,4 +117,54 @@ plt.tight_layout()
 plt.subplots_adjust(top=0.94)
 plt.savefig(f"standalone_{ENGINE}_benchmark_final.png", dpi=300)
 print(f"Graph generated successfully: standalone_{ENGINE}_benchmark_final.png")
-# plt.show() # Uncomment to view interactively
+
+# --- Plot 4: Sankey Diagram
+labels = [
+    f"Physical RAM ({RAM_PHYSICAL_MB}MB)", # 0 (Source Node)
+    "OS Overhead (Hidden)",                # 1
+    "File Buff/Cache",                     # 2
+    "Compressed Data",                     # 3
+    "Uncompressed RAM Used",               # 4
+    "Free RAM"                             # 5
+]
+
+# Using the exact same colors from stack_colors in the matplotlib script
+colors = [
+    "#888888", # Source Node (Grey)
+    '#cb42f5', # OS Overhead
+    '#f2f542', # Buff/Cache
+    '#42aaf5', # Compressed Data
+    '#f58a42', # Uncompressed RAM
+    '#42f545'  # Free RAM
+]
+
+# Map the single physical RAM source to the 5 distinct stack segments
+sources = [0, 0, 0, 0, 0]
+targets = [1, 2, 3, 4, 5]
+
+fig = go.Figure(data=[go.Sankey(
+    node=dict(
+        pad=25,
+        thickness=20,
+        line=dict(color="black", width=0.5),
+        label=labels,
+        color=colors
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=means,
+        color="rgba(200, 200, 200, 0.4)" # Light grey links to keep the diagram clean
+    )
+)])
+
+fig.update_layout(
+    title_text=f"Mean Memory Distribution: Standalone {ENGINE.upper()}",
+    font_size=12,
+    height=500
+)
+
+# Save to interactive HTML file
+output_file = f"standalone_{ENGINE}_sankey.html"
+fig.write_html(output_file)
+print(f"Sankey diagram successfully generated: {output_file}")
