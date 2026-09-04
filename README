@@ -4,7 +4,7 @@
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 * **`conf/`**: Layer and multiconfig settings (`layer.conf` and `multiconfig/` target configs for host and guest variants).
 * **`docker_env/`**: Docker build environment.
@@ -25,7 +25,7 @@
 
 ---
 
-## 🚀 Quickstart Tutorial
+## Quickstart Tutorial
 
 ### 1. Build Environment Setup (Docker)
 Build and enter the reproducible Yocto build container:
