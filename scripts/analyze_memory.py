@@ -1,14 +1,15 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 # ==========================================
 # 1. Configuration & Data Loading
 # ==========================================
-HOST_CSV = "sample_data/host_metrics_idle.csv"
-GUEST_CSV = "sample_data/guest_metrics_idle.csv"
-ENGINE = "zram"
-RAM_HOST_MB = 128
+HOST_CSV = "sample_data/host_metrics_web.csv"
+GUEST_CSV = "sample_data/guest_metrics_web.csv"
+ENGINE = "zswap"
+RAM_HOST_MB = 150
 RAM_GUEST_MB = 300
 
 host_df = pd.read_csv(HOST_CSV)
@@ -61,6 +62,27 @@ df['host_base_os_overhead_mb'] = df['host_base_os_overhead_mb'].clip(lower=0)
 # Guest Hypervisor Total Overhead
 df['guest_used_base_hypervisor_mb'] = df['hyp_tot_mb'] - RAM_GUEST_MB
 df['guest_base_os_overhead_mb'] = RAM_GUEST_MB - df['guest_total_mb']
+
+# Calculating Mean Values
+# Host Means
+host_means = [
+    df['host_base_os_overhead_mb'].mean(),
+    df['host_buff_cache_mb'].mean(),
+    df['engine_pool_mb'].mean(),
+    df['host_uncompressed_other_mb'].mean(),
+    df['host_uncompressed_hypervisor_mb'].mean(),
+    df['host_free_mb'].mean()
+]
+
+# Guest Means
+guest_means = [
+    df['guest_used_base_hypervisor_mb'].mean(),
+    df['guest_base_os_overhead_mb'].mean(),
+    df['guest_buff_cache_mb'].mean(),
+    df['guest_used_mb'].mean(),
+    df['guest_free_mb'].mean()
+]
+
 
 # ==========================================
 # 4. Generating Publication Plots
@@ -141,3 +163,61 @@ plt.tight_layout()
 plt.subplots_adjust(top=0.94)
 plt.savefig(f"{ENGINE}_benchmark_stacked_final.png", dpi=300)
 plt.show()
+
+# --- Plot 5: Sankey Diagram mean RAM Analysis ---
+# Define Labels
+labels = [
+    f"Physical Host RAM ({RAM_HOST_MB}MB)",           # 0
+    "OS Overhead (Hidden)",                           # 1
+    "Host Buff/Cache",                                # 2
+    "Compressed Data",                                # 3
+    "Other Uncompressed Used",                        # 4
+    "Guest+Hypervisor Uncompressed Used",             # 5
+    "Host Free RAM",                                  # 6
+    f"Logical Guest RAM ({RAM_GUEST_MB}MB)",          # 7
+    "Hypervisor Overhead",                            # 8
+    "Guest OS Overhead (Hidden)",                     # 9
+    "Guest Buff/Cache",                               # 10
+    "Guest Used",                                     # 11
+    "Guest Free"                                      # 12
+]
+
+# Define Colors (matching your original plot arrays)
+colors = [
+    "#888888", # Source Nodes
+    '#cb42f5', '#f2f542', '#42aaf5', '#f58a42', '#f54242', '#42f545', # Host
+    "#888888", # Source Nodes
+    '#f54299', '#cb42f5', '#f2f542', '#f54242', '#42f545'             # Guest
+]
+
+# Map Sources and Targets
+sources = [0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 7]
+targets = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
+values = host_means + guest_means
+
+# Create Figure
+fig = go.Figure(data=[go.Sankey(
+    node=dict(
+        pad=25,
+        thickness=20,
+        line=dict(color="black", width=0.5),
+        label=labels,
+        color=colors
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=values,
+        color="rgba(200, 200, 200, 0.4)" # Light grey links
+    )
+)])
+
+fig.update_layout(
+    title_text="Mean Memory Distribution: Physical Host vs. Logical Guest",
+    font_size=12,
+    height=800
+)
+
+# Save to interactive HTML file
+output_file = f"{ENGINE}_sankey_benchmark.html"
+fig.write_html(output_file)
