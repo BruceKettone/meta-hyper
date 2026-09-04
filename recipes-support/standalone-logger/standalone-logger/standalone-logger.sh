@@ -12,7 +12,6 @@ if [ "$COMMAND" = "start" ]; then
         exit 1
     fi
 
-    # Unified Header
     echo "timestamp_rel,mem_total,mem_used,mem_free,mem_buff_cache,mem_avail,anon_pages,engine_pool,engine_stored" > $OUTFILE
 
     echo "Ready. Press [ENTER] to capture T=0 and detach..."
@@ -24,10 +23,9 @@ if [ "$COMMAND" = "start" ]; then
             NOW=$(awk '{print $1}' /proc/uptime)
             T_REL=$(awk "BEGIN {printf \"%.2f\", $NOW - $START_TIME}")
 
-            # Execute 'free' once
             eval $(free | awk '/^Mem:/ {printf "TOT=%s; USE=%s; FRE=%s; BUF=%s; AVL=%s", $2, $3, $4, $6, $7}')
 
-            # Guest-specific payload metric
+
             ANON_PAGES=$(awk '/AnonPages/ {print $2}' /proc/meminfo)
 
             # Handle the three configurations: basic(none), zram, zswap

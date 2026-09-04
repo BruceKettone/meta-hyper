@@ -218,6 +218,5 @@ fig.update_layout(
     height=800
 )
 
-# Save to interactive HTML file
 output_file = f"{ENGINE}_sankey_benchmark.html"
 fig.write_html(output_file)

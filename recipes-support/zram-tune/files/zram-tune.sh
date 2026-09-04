@@ -1,5 +1,5 @@
 #!/bin/sh
-echo "=== Tuning Host Memory & ZRAM (Extreme Limits) ==="
+echo "=== Tuning Host Memory & ZRAM ==="
 
 # Stop artificial OOM inflation
 if [ -f /proc/sys/vm/watermark_boost_factor ]; then
@@ -21,10 +21,7 @@ echo 100 > /proc/sys/vm/watermark_scale_factor
 echo 1 > /proc/sys/vm/overcommit_memory
 echo 2048 > /proc/sys/vm/min_free_kbytes
 
-# Supercharge KSM Deduplication & Process Priority
-echo 1000 > /sys/kernel/mm/ksm/pages_to_scan
-echo 10 > /sys/kernel/mm/ksm/sleep_millisecs
-echo 1 > /sys/kernel/mm/ksm/run
+
 if pgrep -x ksmd >/dev/null; then
     renice -n -20 -p $(pgrep -x ksmd) 2>/dev/null || true
 fi

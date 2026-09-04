@@ -7,9 +7,7 @@ SRC_URI = "file://launch-guest.sh"
 S = "${UNPACKDIR}"
 
 do_install() {
-    # Create the /usr/bin directory in the rootfs
+
     install -d ${D}${bindir}
-    
-    # Install the script with executable permissions
     install -m 0755 ${S}/launch-guest.sh ${D}${bindir}/launch-guest
 }

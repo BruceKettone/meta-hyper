@@ -13,7 +13,6 @@ require recipes-kernel/linux/linux-yocto.inc
 LINUX_VERSION ?= "6.19.14"
 LINUX_VERSION_EXTENSION:append = "-tiny-host"
 
-# Yocto fragments removed (switched to mainline kernel.org)
 
 KCONF_BSP_AUDIT_LEVEL = "2"
 

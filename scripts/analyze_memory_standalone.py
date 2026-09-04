@@ -34,7 +34,6 @@ else:
 # ==========================================
 # 3. Derived Analytical Metrics
 # ==========================================
-# Meaningful Data: Active Resident Anon Pages + Swapped Anon Pages
 df['meaningful_data_mb'] = df['anon_pages_mb'] + df['engine_stored_mb']
 
 # Compression Ratio
@@ -44,8 +43,7 @@ df['compression_ratio'] = np.where(df['engine_pool_mb'] > 0, df['engine_stored_m
 # OS Overhead (Hidden memory reserved at boot)
 df['os_overhead_mb'] = (RAM_PHYSICAL_MB - df['mem_total_mb']).clip(lower=0)
 
-# The kernel's 'used' metric includes the compressed swap pool.
-# We isolate all uncompressed RAM used by processes and kernel structures combined.
+
 df['uncompressed_used_mb'] = (df['mem_used_mb'] - df['engine_pool_mb']).clip(lower=0)
 
 #Calculate Mean Values for Sankey
@@ -164,7 +162,6 @@ fig.update_layout(
     height=500
 )
 
-# Save to interactive HTML file
 output_file = f"standalone_{ENGINE}_sankey.html"
 fig.write_html(output_file)
 print(f"Sankey diagram successfully generated: {output_file}")

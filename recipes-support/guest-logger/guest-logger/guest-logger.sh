@@ -12,7 +12,6 @@ if [ "$COMMAND" = "start" ]; then
         exit 1
     fi
 
-    # New Header matching 'free' command
     echo "timestamp_rel,guest_total,guest_used,guest_free,guest_buff_cache,guest_avail,anon_pages" > $OUTFILE
 
     echo "Ready. Press [ENTER] to capture T=0 and detach to background..."
@@ -24,7 +23,7 @@ if [ "$COMMAND" = "start" ]; then
             NOW=$(awk '{print $1}' /proc/uptime)
             T_REL=$(awk "BEGIN {printf \"%.2f\", $NOW - $START_TIME}")
 
-            # Execute 'free' once and map columns
+            # Execute 'free' and map columns
             eval $(free | awk '/^Mem:/ {printf "G_TOT=%s; G_USE=%s; G_FRE=%s; G_BUF=%s; G_AVL=%s", $2, $3, $4, $6, $7}')
 
             ANON_PAGES=$(awk '/AnonPages/ {print $2}' /proc/meminfo)
@@ -42,7 +41,6 @@ elif [ "$COMMAND" = "stop" ]; then
         kill $(cat $PIDFILE)
         rm -f $PIDFILE
         echo "Logging safely stopped."
-        echo "Upload with: cat /tmp/*_guest_metrics.csv | nc termbin.com 9999"
     else
         echo "No logger process found."
     fi
